@@ -1,0 +1,57 @@
+---
+title: "Explore Precip Normals"
+author: "Dave Eslinger"
+date: "5/17/2022"
+output: html_document
+---
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning=FALSE, 
+                      message=FALSE, 
+                      cache = TRUE)
+```
+
+
+```{r load_libraries}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(sf)
+  library(here)
+})
+```
+
+## Purpose
+This file is to explore the precipitation normals and create spatially varying raining days estimates.  Normals were retrieved from: https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ncdc:C00821/html.
+
+```{r read_precip_files}
+geog <- read.fortran(here("data","allstations.txt"), 
+                     format = c("A11", "X1", "F8", "X1", "F8", "X1", "F6", 
+                                "X1", "A3", "X1", "A30"),
+                     col.names = c("id","lat","lon","elev","state","name"))
+
+p001 <- read.fortran(here("data","ann-prcp-avgnds-ge001hi.txt"),
+                     format = c("A11","X7","F5.1","A1"),
+                     col.names = c("id","p001","flag001"))
+p010 <- read.fortran(here("data","ann-prcp-avgnds-ge010hi.txt"),
+                     format = c("A11","X7","F5.1","A1"),
+                     col.names = c("id","p010","flag010"))
+p050 <- read.fortran(here("data","ann-prcp-avgnds-ge050hi.txt"),
+                     format = c("A11","X7","F5.1","A1"),
+                     col.names = c("id","p050","flag050"))
+p100 <- read.fortran(here("data","ann-prcp-avgnds-ge100hi.txt"),
+                     format = c("A11","X7","F5.1","A1"),
+                     col.names = c("id","p100","flag100"))
+
+precip <- read.fortran(here("data","ann-prcp-normal.txt"),
+                     format = c("A11","X7","F5.2","A1"),
+                     col.names = c("id","precip","flagprecip"))
+
+full <- left_join(p001,p010, by = "id") %>% 
+  left_join(p010, by = "id") %>% 
+  left_join(p050, by = "id") %>% 
+  left_join(p100, by = "id") %>% 
+  left_join(precip, by = "id") %>%
+  left_join(geog, by = "id") %>% 
+  st_as_sf(coords = c("lon","lat"),remove = FALSE)
+st_crs(full) <- 4326  #WGS84
+```
